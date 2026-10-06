@@ -47,6 +47,21 @@ def test_empty_effort_uses_default_on():
     }
 
 
+def test_empty_config_uses_default_on():
+    assert wire.resolve_thinking({}) == {
+        "enable_thinking": True,
+        "reasoning_effort": "medium",
+    }
+
+
+def test_enabled_false_beats_explicit_effort():
+    # `enabled` is the switch: an effort sitting next to it does not turn
+    # thinking back on.
+    assert wire.resolve_thinking({"enabled": False, "effort": "low"}) == {
+        "enable_thinking": False
+    }
+
+
 # --- resolve_thinking: clamping and fallback --------------------------------
 
 

@@ -35,7 +35,10 @@ DEFAULT_CTX = 262144
 KEYLESS_API_KEY = "no-key-required"
 
 # Hermes' reasoning-effort vocabulary this route accepts (tri-state contract:
-# a non-empty tuple makes the transport clamp requests onto exactly these).
+# a non-empty tuple makes the transport that consults it clamp requests onto
+# exactly these). Hermes' Responses transport reads it through
+# ``supported_reasoning_efforts``; this route is chat_completions, where the
+# clamp that actually reaches the wire is ``wire._clamp_effort``.
 REASONING_EFFORTS: tuple[str, ...] = ("none",) + EFFORT_LEVELS
 
 _EFFORT_CHOICES: tuple[str, ...] = EFFORT_LEVELS + ("off",)

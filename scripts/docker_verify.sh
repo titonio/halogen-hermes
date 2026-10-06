@@ -21,7 +21,9 @@
 set -euo pipefail
 
 HALOGEN_BASE_URL=${HALOGEN_BASE_URL:?"set HALOGEN_BASE_URL to a halogen /v1 endpoint reachable from the container, e.g. http://192.168.31.7:8731/v1"}
-HALOGEN_API_KEY=${HALOGEN_API_KEY:-no-key-required}
+# exported, not just assigned: run_hermes passes it to docker with `-e NAME`
+# (no `=`) so the value never appears in the container command line / ps.
+export HALOGEN_API_KEY=${HALOGEN_API_KEY:-no-key-required}
 IMAGE=${IMAGE:-nousresearch/hermes-agent:latest}
 MODEL=${MODEL:-halogen-qwen3.8-flash-next}
 TOKEN=HALOGEN_E2E_OK
@@ -83,8 +85,11 @@ mkdir -p "$PLUGIN_DIR"
         .
 ) | (cd "$PLUGIN_DIR" && tar xf -)
 # Repo files may be owner-only (600); the container's hermes user must read the
-# plugin and write into $HERMES_HOME (auth.json, .env seeding).
-chmod -R a+rwX "$DATA"
+# plugin. World-writable only on the $HERMES_HOME root itself, which is where the
+# container writes (auth.json, .env seeding) — the staged plugin tree stays
+# read-only to the container.
+chmod -R a+rX "$DATA"
+chmod a+rwX "$DATA"
 
 # Hermes accepts model.name as an alias of model.default (config.py normalizes
 # default > model > name), so this shape is valid.
@@ -101,7 +106,7 @@ run_hermes() {
     "$DOCKER" run --rm \
         -v "$DATA:/opt/data$MOUNT_SUFFIX" \
         -e HALOGEN_BASE_URL="$HALOGEN_BASE_URL" \
-        -e HALOGEN_API_KEY="$HALOGEN_API_KEY" \
+        -e HALOGEN_API_KEY \
         "$IMAGE" hermes "$@"
 }
 
@@ -115,18 +120,20 @@ halogen_discovered() {
 # --- check 1: the plugin is discovered ---
 echo "== hermes plugins list =="
 list_out=$(run_hermes plugins list --plain --no-bundled 2>&1) || list_out_rc=$?
+printf '%s\n' "$list_out"
+if [ "${list_out_rc:-0}" -ne 0 ]; then
+    echo "note: 'hermes plugins list' failed (exit ${list_out_rc}); falling back to hermes doctor" >&2
+elif ! halogen_discovered "$list_out"; then
+    echo "note: 'hermes plugins list' did not name halogen; confirming with hermes doctor" >&2
+fi
 if [ "${list_out_rc:-0}" -ne 0 ] || ! halogen_discovered "$list_out"; then
-    printf '%s\n' "$list_out"
-    echo "note: 'hermes plugins list' unusable; falling back to hermes doctor" >&2
     if ! doctor_out=$(run_hermes doctor 2>&1); then
         printf '%s\n' "$doctor_out" >&2
-        echo "FAIL: both 'plugins list' and 'doctor' failed"
+        echo "FAIL: 'hermes doctor' failed and 'plugins list' did not confirm halogen"
         exit 1
     fi
     printf '%s\n' "$doctor_out"
     halogen_discovered "$doctor_out" || { echo "FAIL: halogen not discovered"; exit 1; }
-else
-    printf '%s\n' "$list_out"
 fi
 echo "PASS: halogen provider discovered"
 

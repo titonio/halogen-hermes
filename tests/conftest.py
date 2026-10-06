@@ -13,6 +13,8 @@ try:
     import providers  # noqa: F401
     import providers.base  # noqa: F401
 except ImportError:
+    # By design: a sibling-module ImportError (``providers`` importable but
+    # ``providers.base`` broken) lands here too, and the stubs replace both.
     _providers = types.ModuleType("providers")
     _providers.REGISTRY = {}  # name/alias -> profile, mirrors register_provider()
 

@@ -17,10 +17,12 @@ generic route lacks:
 - **Output-budget clamp** — `max_tokens` is capped at
   `min(requested, max(1024, 25% × context))` so `max_tokens + prompt ≤ context`
   holds (halogen admits a request only when that is true).
-- **halogen error taxonomy** — 401/403 → auth, 429 → rate limit, 5xx →
-  server/overloaded, and halogen's token-budget 400 wording ("does not fit",
-  "leaving room for") → `context_overflow` so Hermes' compaction can recover
-  instead of aborting the turn.
+- **halogen error taxonomy** — halogen's token-budget 400 wording ("does not
+  fit", "leaving room for") → `context_overflow` with the compaction hint, so
+  Hermes compacts and retries instead of aborting the turn. Every other status
+  (401/403 → auth, 429 → rate limit, 5xx → server/overloaded) is deliberately
+  left to Hermes' built-in classifier, which maps those with the correct
+  recovery hints already.
 - **Catalog** — model `halogen-qwen3.8-flash-next`, context 262,144, tools and
   reasoning declared.
 
@@ -36,6 +38,7 @@ Pick one.
 
 ```bash
 git clone <this-repo> && cd halogen-hermes
+export HALOGEN_API_KEY=no-key-required   # Hermes' credential gate needs a non-empty key
 mkdir -p ~/.hermes/plugins/model-providers/halogen
 tar cf - --exclude=./tests --exclude=./scripts --exclude=./docs \
     --exclude=./.git --exclude=./conftest.py --exclude='__pycache__' . \
@@ -87,24 +90,27 @@ Two scripts, no Hermes install needed for the first:
 
 ```bash
 # 1. wire smoke — proves the halogen endpoint speaks what the plugin sends
-HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 python3 scripts/wire_smoke.py
+HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 python3 scripts/wire_smoke.py
 # PASS models / chat-thinking-on / chat-thinking-off / tool-round-trip
 
 # 2. container e2e — real Hermes image, plugin bind-mounted, one real turn
-HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 bash scripts/docker_verify.sh
+HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 bash scripts/docker_verify.sh
 # PASS: halogen provider discovered
 # PASS: token HALOGEN_E2E_OK found (hermes chat -q)
 ```
 
+`wire_smoke.py` sends no `Authorization` header, so a key-protected deployment
+cannot be smoke-tested with it.
+
 `docker_verify.sh` stages a throwaway `mktemp` `HERMES_HOME` (removed on
 exit), runs `hermes plugins list` (halogen must appear), then a one-shot turn
 `"Reply with exactly: HALOGEN_E2E_OK"` and requires the token in the output.
-That list shows the row as `not enabled  user  0.1.0  halogen-provider` even
-when the plugin is installed and working: for a drop-in model-provider plugin
-that status label is expected, not an install failure — the provider is active
-once selected via config/env, which is why the script only requires the name to
-appear. Notes from the image it was verified against
-(`nousresearch/hermes-agent:latest`):
+That list showed the row as `not enabled  user  0.1.0  halogen-provider` on the
+image this was verified against (`nousresearch/hermes-agent:latest`), even
+though the plugin was installed and working; current Hermes shows drop-in
+model-provider plugins as enabled. Either way the status label is not the check
+— the provider is active once selected via config/env, which is why the script
+only requires the name to appear. Notes from that image:
 
 - The image's one-shot CLI is `hermes chat -q "<prompt>"` or `hermes -z
   "<prompt>"` (prints only the final response); a top-level `hermes -q` is
@@ -129,7 +135,7 @@ model:
 
 custom_providers:
   - name: halogen
-    base_url: http://192.168.31.7:8731/v1
+    base_url: http://<halogen-host>:8731/v1
     model: halogen-qwen3.8-flash-next
     context_length: 262144
     api_key: "no-key-required"   # halogen has no auth; Hermes needs a non-empty key
