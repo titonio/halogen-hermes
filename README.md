@@ -99,7 +99,12 @@ HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 bash scripts/docker_verify.sh
 `docker_verify.sh` stages a throwaway `mktemp` `HERMES_HOME` (removed on
 exit), runs `hermes plugins list` (halogen must appear), then a one-shot turn
 `"Reply with exactly: HALOGEN_E2E_OK"` and requires the token in the output.
-Notes from the image it was verified against (`nousresearch/hermes-agent:latest`):
+That list shows the row as `not enabled  user  0.1.0  halogen-provider` even
+when the plugin is installed and working: for a drop-in model-provider plugin
+that status label is expected, not an install failure — the provider is active
+once selected via config/env, which is why the script only requires the name to
+appear. Notes from the image it was verified against
+(`nousresearch/hermes-agent:latest`):
 
 - The image's one-shot CLI is `hermes chat -q "<prompt>"` or `hermes -z
   "<prompt>"` (prints only the final response); a top-level `hermes -q` is
