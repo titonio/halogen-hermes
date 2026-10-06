@@ -1,0 +1,5 @@
+name: halogen-provider
+kind: model-provider
+version: 0.1.0
+description: Halogen (halogen-flash-server) — Qwen3.8-Flash-Next on Strix Halo
+author: dshagent

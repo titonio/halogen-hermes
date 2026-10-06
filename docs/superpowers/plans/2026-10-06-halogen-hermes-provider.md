@@ -6,7 +6,7 @@
 
 **Architecture:** One Hermes model-provider plugin directory (repo root is the plugin dir): a `ProviderProfile` subclass registered at import, with all decision logic in two pure-stdlib modules (`wire.py`, `errors.py`) that are unit-tested without Hermes installed. Verification: pytest units → direct wire smoke against the live halogen → throwaway `nousresearch/hermes-agent` Docker container with the plugin bind-mounted.
 
-**Tech Stack:** Python 3.10+ stdlib only (plugin code); pytest; Docker (podman also fine) for e2e; live halogen-flash-server at `http://192.168.31.7:8731`.
+**Tech Stack:** Python 3.10+ stdlib only (plugin code); pytest; Docker (podman also fine) for e2e; live halogen-flash-server at `http://<halogen-host>:8731`.
 
 **Spec:** `docs/superpowers/specs/2026-10-06-halogen-hermes-provider-design.md`
 
@@ -114,7 +114,7 @@ Failure modes the spec implies that task tests must pin explicitly:
 
 - [ ] **Step 1: Write `scripts/wire_smoke.py`** (stdlib `urllib`): base URL from `HALOGEN_BASE_URL` (default `http://127.0.0.1:8731/v1`); checks — (a) `GET {base}/models` lists `halogen-qwen3.8-flash-next`; (b) chat completion with `messages=[{"role":"user","content":"Reply with exactly: HALOGEN_SMOKE_OK"}]`, `stream: false`, plus `resolve_thinking({"enabled": True, "effort": "minimal"})` merged into the body → 200 and non-empty `choices[0].message.content`; (c) same with `{"enabled": False}` → 200; (d) tool round-trip: declare one trivial `get_weather` tool, ask "What's the weather in Lisbon?", assert `choices[0].message.tool_calls` non-empty. Print one line per check; nonzero exit on any failure.
 
-- [ ] **Step 2: Run against the live instance** — `HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 python3 scripts/wire_smoke.py` → all four checks PASS.
+- [ ] **Step 2: Run against the live instance** — `HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 python3 scripts/wire_smoke.py` → all four checks PASS.
 
 - [ ] **Step 3: Commit** `feat: live wire smoke script for halogen endpoints`
 
@@ -131,7 +131,7 @@ Failure modes the spec implies that task tests must pin explicitly:
 
 - [ ] **Step 1: Write `scripts/docker_verify.sh`** — `set -euo pipefail`; `IMAGE=${IMAGE:-nousresearch/hermes-agent:latest}`; `DATA=$(mktemp -d)`; copy plugin files (everything except `tests/`, `scripts/`, `docs/`, `.git`) into `$DATA/plugins/model-providers/halogen/`; write `$DATA/config.yaml` with `model: {provider: halogen, name: halogen-qwen3.8-flash-next}`; `docker run --rm -e HALOGEN_BASE_URL -v "$DATA:/opt/data" $IMAGE hermes plugins list` (halogen must appear — if the image lacks this subcommand, fall back to `hermes doctor`); `docker run ... hermes -q "Reply with exactly: HALOGEN_E2E_OK"` must print the token; trap-removes `$DATA`. If the image's config schema rejects `model.provider: halogen`, adjust to the schema the container reports and note it in the README.
 
-- [ ] **Step 2: Run it** — `HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 bash scripts/docker_verify.sh` → plugin listed, `HALOGEN_E2E_OK` printed. Nothing persists on the host beyond the temp dir.
+- [ ] **Step 2: Run it** — `HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 bash scripts/docker_verify.sh` → plugin listed, `HALOGEN_E2E_OK` printed. Nothing persists on the host beyond the temp dir.
 
 - [ ] **Step 3: Write `README.md`** — what it is; three install paths (drop-in copy to `~/.hermes/plugins/model-providers/halogen/`, `hermes plugins install <owner>/halogen-hermes`, Docker bind-mount as in `docker_verify.sh`); env-var config table (copy from spec); `scripts/wire_smoke.py` usage; zero-code fallback (`custom_providers` block pointing at halogen with server-side `HALOGEN_*` defaults, per the halogen README's harness guidance); limitations section from the spec (no call-purpose thinking override for compaction, env read at process start, static vision flag, user-set `max_tokens` above the clamp relies on context_overflow recovery).
 

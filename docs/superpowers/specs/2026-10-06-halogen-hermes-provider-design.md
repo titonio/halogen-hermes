@@ -21,7 +21,7 @@ custom OpenAI-compatible endpoints).
 
 ## Background facts (verified on this machine, 2026-10-06)
 
-- Live halogen instance: `http://192.168.31.7:8731` — API/engine 0.16.2,
+- Live halogen instance: `http://<halogen-host>:8731` — API/engine 0.16.2,
   model `halogen-qwen3.8-flash-next`, context 262,144, `max_tokens_default`
   8192, `max_tokens_cap` 65536, vision tower **enabled**, tool-call wire format
   Qwen-XML, thinking control probed OK.
@@ -152,7 +152,7 @@ context accounting governs.
    edges (tiny ctx, cap below floor, no cap), error classification table, env
    override parsing, profile field assertions against a stubbed
    `providers.base.ProviderProfile`.
-2. **Wire smoke (live halogen at 192.168.31.7:8731):** plain chat, thinking
+2. **Wire smoke (live halogen at <halogen-host>:8731):** plain chat, thinking
    on/off + effort, tool-call round-trip, `/v1/models` shape — via a small
    script, no Hermes needed.
 3. **End-to-end (throwaway Docker):** `nousresearch/hermes-agent` image with
