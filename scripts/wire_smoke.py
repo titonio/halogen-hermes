@@ -8,7 +8,7 @@ user-facing diagnostic for a new deployment.
 
 Stdlib only (urllib). Run from anywhere:
 
-    HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 python3 scripts/wire_smoke.py
+    HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 python3 scripts/wire_smoke.py
 
 Exit code is 0 only when all four checks pass.
 """

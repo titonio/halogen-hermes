@@ -51,12 +51,12 @@ def test_declared_identity_fields():
 
 def test_env_overrides_land():
     p = build_profile({
-        "HALOGEN_BASE_URL": "http://192.168.31.7:8731/v1",
+        "HALOGEN_BASE_URL": "http://halogen.example:8731/v1",
         "HALOGEN_CTX": "1048576",
         "HALOGEN_VISION": "1",
         "HALOGEN_MAX_TOKENS": "65536",
     })
-    assert p.base_url == "http://192.168.31.7:8731/v1"
+    assert p.base_url == "http://halogen.example:8731/v1"
     assert p.default_max_tokens == 65536
     assert p.supports_vision is True
     assert p.model_capabilities[MODEL]["supports_vision"] is True

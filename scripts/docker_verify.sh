@@ -5,7 +5,7 @@
 # routes through the plugin.
 #
 # Usage:
-#   HALOGEN_BASE_URL=http://192.168.31.7:8731/v1 bash scripts/docker_verify.sh
+#   HALOGEN_BASE_URL=http://<halogen-host>:8731/v1 bash scripts/docker_verify.sh
 #
 # Env:
 #   HALOGEN_BASE_URL   required — a halogen endpoint reachable *from the
@@ -20,7 +20,7 @@
 # Nothing persists on the host: the data dir is a mktemp tree removed on exit.
 set -euo pipefail
 
-HALOGEN_BASE_URL=${HALOGEN_BASE_URL:?"set HALOGEN_BASE_URL to a halogen /v1 endpoint reachable from the container, e.g. http://192.168.31.7:8731/v1"}
+HALOGEN_BASE_URL=${HALOGEN_BASE_URL:?"set HALOGEN_BASE_URL to a halogen /v1 endpoint reachable from the container, e.g. http://<halogen-host>:8731/v1"}
 # exported, not just assigned: run_hermes passes it to docker with `-e NAME`
 # (no `=`) so the value never appears in the container command line / ps.
 export HALOGEN_API_KEY=${HALOGEN_API_KEY:-no-key-required}
