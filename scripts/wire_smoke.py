@@ -103,7 +103,10 @@ def check_models():
     status, body = _request("/models")
     if status != 200:
         return False, f"GET /models -> HTTP {status}: {_snippet(body)}"
-    ids = [m.get("id") for m in body.get("data", []) if isinstance(m, dict)]
+    data = body.get("data") if isinstance(body, dict) else None
+    if not isinstance(data, list):
+        return False, f"GET /models -> 200 but no data list: {_snippet(body)}"
+    ids = [m.get("id") for m in data if isinstance(m, dict)]
     if MODEL in ids:
         return True, f"{MODEL} listed in /models"
     return False, f"{MODEL} not in model list {ids}"
@@ -114,6 +117,7 @@ def check_chat_thinking_on():
     status, body = _chat(
         [{"role": "user", "content": "Reply with exactly: HALOGEN_SMOKE_OK"}],
         extra=thinking,
+        max_tokens=256,
     )
     if status != 200:
         return False, f"chat thinking-on -> HTTP {status}: {_snippet(body)}"
